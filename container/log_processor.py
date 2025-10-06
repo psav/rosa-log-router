@@ -427,7 +427,7 @@ def validate_tenant_delivery_config(config: Dict[str, Any], tenant_id: str) -> N
         raise TenantNotFoundError(f"Tenant {tenant_id} delivery configuration missing 'type' field")
 
     if delivery_type == 'cloudwatch':
-        required_fields = ['log_distribution_role_arn', 'log_group_name']
+        required_fields = ['log_distribution_role_arn', 'log_group_name', 'external_id']
         for field in required_fields:
             if field not in config:
                 raise TenantNotFoundError(f"Tenant {tenant_id} CloudWatch delivery config missing required field: {field}")
@@ -794,8 +794,8 @@ def deliver_logs_to_cloudwatch(
         # Extract central role credentials (Vector will use these to assume customer role)
         central_credentials = central_role_response['Credentials']
 
-        # Get the current account ID for ExternalId
-        current_account_id = boto3.client('sts').get_caller_identity()['Account']
+        # Get the external_id from tenant config for customer role assumption
+        external_id = delivery_config['external_id']
 
         # Generate unique session ID for Vector
         session_id = str(uuid.uuid4())
@@ -810,7 +810,7 @@ def deliver_logs_to_cloudwatch(
             log_events=log_events,
             central_credentials=central_credentials,
             customer_role_arn=delivery_config['log_distribution_role_arn'],
-            external_id=current_account_id,
+            external_id=external_id,
             region=target_region,
             log_group=log_group_name,
             log_stream=log_stream_name,

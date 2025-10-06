@@ -101,6 +101,7 @@ def sample_cloudwatch_config():
         "type": "cloudwatch",
         "log_distribution_role_arn": "arn:aws:iam::123456789012:role/TestRole",
         "log_group_name": "/aws/logs/test-tenant",
+        "external_id": "123456789012",
         "target_region": "us-east-1",
         "enabled": True,
         "desired_logs": ["app1", "app2"]
@@ -129,6 +130,7 @@ def multiple_delivery_configs():
             "type": "cloudwatch",
             "log_distribution_role_arn": "arn:aws:iam::123456789012:role/Role1",
             "log_group_name": "/aws/logs/tenant-1",
+            "external_id": "123456789012",
             "target_region": "us-east-1",
             "enabled": True
         },
@@ -145,6 +147,7 @@ def multiple_delivery_configs():
             "type": "cloudwatch",
             "log_distribution_role_arn": "arn:aws:iam::123456789012:role/Role2",
             "log_group_name": "/aws/logs/tenant-2",
+            "external_id": "123456789012",
             "target_region": "us-west-2",
             "enabled": False,
             "desired_logs": ["payment-service"]

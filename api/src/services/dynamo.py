@@ -408,8 +408,8 @@ class TenantDeliveryConfigService:
         
         # Type-specific validation
         if delivery_type == 'cloudwatch':
-            required_fields = ['log_distribution_role_arn', 'log_group_name']
-            
+            required_fields = ['log_distribution_role_arn', 'log_group_name', 'external_id']
+
             for field in required_fields:
                 if field not in config or not config[field]:
                     validation_results['valid'] = False
@@ -424,7 +424,7 @@ class TenantDeliveryConfigService:
                         'status': 'ok',
                         'message': f'CloudWatch field {field} is present'
                     })
-            
+
             # Role ARN format validation
             role_arn = config.get('log_distribution_role_arn', '')
             if role_arn and not role_arn.startswith('arn:aws:iam::'):

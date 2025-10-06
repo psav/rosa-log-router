@@ -30,6 +30,7 @@ The Tenant Management API provides a secure, REST-based interface for managing t
   "type": "cloudwatch",
   "log_distribution_role_arn": "arn:aws:iam::123456789012:role/LogDistributionRole",
   "log_group_name": "/aws/logs/acme-corp",
+  "external_id": "111122223333",
   "target_region": "us-east-1",
   "enabled": true,
   "desired_logs": ["payment-service", "user-service"],
@@ -135,6 +136,7 @@ type CloudWatchDeliveryConfig struct {
     Type                   string   `json:"type"`
     LogDistributionRoleArn string   `json:"log_distribution_role_arn"`
     LogGroupName           string   `json:"log_group_name"`
+    ExternalID             string   `json:"external_id"`
     TargetRegion           string   `json:"target_region,omitempty"`
     Enabled                *bool    `json:"enabled,omitempty"`
     DesiredLogs            []string `json:"desired_logs,omitempty"`
@@ -172,6 +174,7 @@ type DeliveryConfigCreateRequest struct {
     // CloudWatch-specific fields
     LogDistributionRoleArn string `json:"log_distribution_role_arn,omitempty"`
     LogGroupName           string `json:"log_group_name,omitempty"`
+    ExternalID             string `json:"external_id,omitempty"`
     
     // S3-specific fields
     BucketName   string `json:"bucket_name,omitempty"`
@@ -497,6 +500,7 @@ Content-Type: application/json
   "type": "cloudwatch",
   "log_distribution_role_arn": "arn:aws:iam::123456789012:role/LogDistributionRole",
   "log_group_name": "/aws/logs/acme-corp",
+  "external_id": "111122223333",
   "target_region": "us-east-1",
   "enabled": true,
   "desired_logs": ["payment-service", "user-service"],
@@ -524,6 +528,7 @@ Content-Type: application/json
 {
   "log_distribution_role_arn": "arn:aws:iam::123456789012:role/UpdatedLogDistributionRole",
   "log_group_name": "/aws/logs/acme-corp-updated",
+  "external_id": "111122223333",
   "target_region": "us-west-2",
   "enabled": true,
   "desired_logs": ["payment-service", "user-service", "api-gateway"],
@@ -609,6 +614,7 @@ This will process logs from: `custom-app-1`, `kube-apiserver`, `openshift-apiser
 |-------|------|----------|-------------|
 | `log_distribution_role_arn` | String | Yes | Customer IAM role ARN |
 | `log_group_name` | String | Yes | CloudWatch Logs group name |
+| `external_id` | String | Yes | External ID for cross-account role assumption |
 
 ### S3-Specific Fields
 
@@ -649,6 +655,7 @@ This will process logs from: `custom-app-1`, `kube-apiserver`, `openshift-apiser
         "type": "cloudwatch",
         "log_distribution_role_arn": "arn:aws:iam::123456789012:role/LogDistributionRole",
         "log_group_name": "/aws/logs/acme-corp",
+        "external_id": "111122223333",
         "enabled": true,
         "created_at": "2024-01-15T10:30:00Z"
       }
@@ -777,6 +784,7 @@ curl -X POST "https://api.example.com/api/v1/tenants/acme-corp/delivery-configs"
     "type": "cloudwatch",
     "log_distribution_role_arn": "arn:aws:iam::123456789012:role/LogDistributionRole",
     "log_group_name": "/aws/logs/acme-corp",
+    "external_id": "111122223333",
     "target_region": "us-east-1",
     "enabled": true,
     "desired_logs": ["payment-service", "user-service"],

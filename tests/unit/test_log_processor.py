@@ -129,8 +129,8 @@ class TestExtractTenantInfoFromKey:
 
 class TestTenantConfiguration:
     
-    def _create_test_delivery_config(self, tenant_id: str = 'test-tenant', delivery_type: str = 'cloudwatch', 
-                                   enabled: bool = True, desired_logs: list = None) -> Dict[str, Any]:
+    def _create_test_delivery_config(self, tenant_id: str = 'test-tenant', delivery_type: str = 'cloudwatch',
+                                   enabled: bool = True, desired_logs: list = None, external_id: str = '123456789012') -> Dict[str, Any]:
         """Helper method to create test delivery configurations with standard structure."""
         config = {
             'tenant_id': tenant_id,
@@ -139,16 +139,17 @@ class TestTenantConfiguration:
             'target_region': 'us-east-1',
             'enabled': enabled
         }
-        
+
         if delivery_type == 'cloudwatch':
             config['log_group_name'] = f'/aws/logs/{tenant_id}'
+            config['external_id'] = external_id
         elif delivery_type == 's3':
             config['bucket_name'] = f'{tenant_id}-logs'
             config['bucket_prefix'] = 'logs/'
-        
+
         if desired_logs is not None:
             config['desired_logs'] = desired_logs
-            
+
         return config
     
     @pytest.fixture
@@ -187,16 +188,18 @@ class TestTenantConfiguration:
             'type': 'cloudwatch',
             'log_distribution_role_arn': 'arn:aws:iam::987654321098:role/LogRole',
             'log_group_name': '/aws/logs/acme-corp',
+            'external_id': '123456789012',
             'target_region': 'us-east-1',
             'enabled': True,
             'desired_logs': ['payment-service', 'user-service']
         })
-        
+
         table.put_item(Item={
             'tenant_id': 'disabled-tenant',
             'type': 'cloudwatch',
             'log_distribution_role_arn': 'arn:aws:iam::987654321098:role/LogRole',
             'log_group_name': '/aws/logs/disabled',
+            'external_id': '123456789012',
             'target_region': 'us-east-1',
             'enabled': False
         })
@@ -257,6 +260,7 @@ class TestTenantConfiguration:
             'type': 'cloudwatch',
             'log_distribution_role_arn': 'arn:aws:iam::987654321098:role/LogRole',
             'log_group_name': '/aws/logs/disabled',
+            'external_id': '123456789012',
             'target_region': 'us-east-1',
             'enabled': False
         })
@@ -783,6 +787,7 @@ class TestMultiDeliveryLogic:
             'type': 'cloudwatch',
             'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/CloudWatchRole',
             'log_group_name': '/aws/logs/multi-delivery-tenant',
+            'external_id': '123456789012',
             'target_region': 'us-east-1',
             'enabled': True,
             'desired_logs': ['kube_api_server', 'etcd']
@@ -805,6 +810,7 @@ class TestMultiDeliveryLogic:
             'type': 'cloudwatch',
             'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/AllAppsRole',
             'log_group_name': '/aws/logs/all-apps-tenant',
+            'external_id': '123456789012',
             'target_region': 'us-east-1',
             'enabled': True
             # No desired_logs field - should process all applications
@@ -1022,6 +1028,7 @@ class TestSQSRecordProcessing:
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::987654321098:role/LogRole',
                 'log_group_name': '/aws/logs/acme-corp',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
@@ -1243,6 +1250,7 @@ class TestCrossAccountRoleAssumption:
             'type': 'cloudwatch',
             'log_distribution_role_arn': 'arn:aws:iam::987654321098:role/CustomerRole',
             'log_group_name': '/aws/logs/customer',
+            'external_id': '123456789012',
             'target_region': 'us-east-1'
         }
         tenant_info = {
@@ -2147,24 +2155,25 @@ class TestEndToEndPartialDelivery:
              patch('log_processor.download_and_process_log_file') as mock_download, \
              patch('log_processor.deliver_logs_to_cloudwatch') as mock_deliver_cw, \
              patch('log_processor.requeue_sqs_message_with_offset') as mock_requeue:
-            
+
             # Setup tenant config
             mock_get_tenant.return_value = [{
                 'tenant_id': 'test-tenant',
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                 'log_group_name': '/aws/logs/test-tenant',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
-            
+
             # Setup log events
             log_events = [
                 {"message": f"Log event {i}", "timestamp": 1640995200000 + i}
                 for i in range(100)
             ]
             mock_download.return_value = (log_events, 1640995200000)
-            
+
             # Simulate CloudWatch partial failure
             partial_failure_error = Exception("Failed to deliver 20 out of 100 events to CloudWatch")
             mock_deliver_cw.side_effect = partial_failure_error
@@ -2215,24 +2224,25 @@ class TestEndToEndPartialDelivery:
         with patch('log_processor.get_tenant_delivery_configs') as mock_get_tenant, \
              patch('log_processor.download_and_process_log_file') as mock_download, \
              patch('log_processor.deliver_logs_to_cloudwatch') as mock_deliver_cw:
-            
+
             # Setup tenant config
             mock_get_tenant.return_value = [{
                 'tenant_id': 'test-tenant',
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                 'log_group_name': '/aws/logs/test-tenant',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
-            
+
             # Setup original log events (100 total)
             original_log_events = [
                 {"message": f"Log event {i}", "timestamp": 1640995200000 + i}
                 for i in range(100)
             ]
             mock_download.return_value = (original_log_events, 1640995200000)
-            
+
             # Simulate successful CloudWatch delivery (retry succeeds)
             mock_deliver_cw.return_value = {'successful_events': 50, 'failed_events': 0}
             
@@ -2285,6 +2295,7 @@ class TestEndToEndPartialDelivery:
                     'type': 'cloudwatch',
                     'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/CloudWatchRole',
                     'log_group_name': '/aws/logs/multi-tenant',
+                    'external_id': '123456789012',
                     'target_region': 'us-east-1',
                     'enabled': True
                 },
@@ -2360,14 +2371,15 @@ class TestEndToEndPartialDelivery:
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                 'log_group_name': '/aws/logs/test-tenant',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
-            
+
             # Setup log events
             log_events = [{"message": "test", "timestamp": 1640995200000}]
             mock_download.return_value = (log_events, 1640995200000)
-            
+
             # CloudWatch delivery fails again
             mock_deliver_cw.side_effect = Exception("Persistent CloudWatch failure")
             
@@ -2456,6 +2468,7 @@ class TestSQSMessageLifecycle:
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                 'log_group_name': '/aws/logs/sqs-tenant',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
@@ -2526,6 +2539,7 @@ class TestSQSMessageLifecycle:
                         'type': 'cloudwatch',
                         'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/GoodRole',
                         'log_group_name': '/aws/logs/good-tenant',
+                        'external_id': '123456789012',
                         'target_region': 'us-east-1',
                         'enabled': True
                     }]
@@ -2577,12 +2591,13 @@ class TestSQSMessageLifecycle:
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                 'log_group_name': '/aws/logs/test-tenant',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
-            
+
             mock_download.return_value = ([{"message": "test", "timestamp": 1640995200000}], 1640995200000)
-            
+
             # Mock recoverable error in CloudWatch delivery
             mock_deliver_cw.side_effect = Exception("Recoverable CloudWatch error")
             
@@ -2639,6 +2654,7 @@ class TestSQSMessageLifecycle:
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                 'log_group_name': '/aws/logs/attr-tenant',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
@@ -2720,6 +2736,7 @@ class TestSQSMessageLifecycle:
                         'type': 'cloudwatch',
                         'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                         'log_group_name': '/aws/logs/test-tenant',
+                        'external_id': '123456789012',
                         'target_region': 'us-east-1',
                         'enabled': True
                     }]
@@ -2783,6 +2800,7 @@ class TestSQSMessageLifecycle:
                 'type': 'cloudwatch',
                 'log_distribution_role_arn': 'arn:aws:iam::123456789012:role/TestRole',
                 'log_group_name': '/aws/logs/order-tenant',
+                'external_id': '123456789012',
                 'target_region': 'us-east-1',
                 'enabled': True
             }]
